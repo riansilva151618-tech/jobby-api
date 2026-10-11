@@ -1,65 +1,74 @@
 const express = require('express');
 const axios = require('axios');
 const cors = require('cors');
+
 const app = express();
 
 app.use(express.json());
 app.use(cors());
 
-const ASAAS_API_URL = 'https://sandbox.asaas.com/api/v3';
-const ASAAS_ACCESS_KEY = process.env.ASAAS_ACCESS_KEY || 'SUA_CHAVE_DE_API_AQUI'; 
+// Token do Mercado Pago vindo das variáveis de ambiente do Render
+const MERCADOPAGO_ACCESS_TOKEN = process.env.MERCADOPAGO_ACCESS_TOKEN;
 
+// Rota de teste para ver se o servidor está online
 app.get('/', (req, res) => {
-    res.send('Servidor Jobby Backend Online e Operacional!');
+    res.send('Servidor Jobby Backend Online e Operacional com Mercado Pago!');
 });
 
+// Rota para criar o pagamento Pix
 app.post('/api/pagar-pix', async (req, res) => {
     try {
-        const { title, budget, freelancerWalletId, customerName } = req.body;
-        const valorTotal = parseFloat(budget);
-        
-        if (isNaN(valorTotal) || valorTotal <= 0) {
-            return res.status(400).json({ success: false, error: 'Orçamento inválido.' });
-        }
+        const { transaction_amount, description, payer } = req.body;
 
-        const payloadCobranca = {
-            customer: customerName || "Empresa Contratante Jobby",
-            billingType: 'PIX',
-            value: valorTotal,
-            dueDate: new Date().toISOString().split('T')[0],
-            description: `Projeto Jobby: ${title}`,
-            split: [
-                {
-                    walletId: freelancerWalletId,
-                    percentualValue: 85.00
+        const paymentData = {
+            transaction_amount: Number(transaction_amount),
+            description: description || 'Pagamento Jobby',
+            payment_method_id: 'pix',
+            payer: {
+                email: payer?.email || 'cliente@jobby.com',
+                first_name: payer?.first_name || 'Cliente',
+                last_name: payer?.last_name || 'Jobby',
+                identification: {
+                    type: payer?.identification?.type || 'CPF',
+                    number: payer?.identification?.number || '12345678909'
                 }
-            ]
+            }
         };
 
-        const responseCobranca = await axios.post(`${ASAAS_API_URL}/payments`, payloadCobranca, {
-            headers: { 'access_token': ASAAS_ACCESS_KEY, 'Content-Type': 'application/json' }
-        });
+        const response = await axios.post(
+            'https://api.mercadopago.com/v1/payments',
+            paymentData,
+            {
+                headers: {
+                    'Authorization': `Bearer ${MERCADOPAGO_ACCESS_TOKEN}`,
+                    'Content-Type': 'application/json',
+                    'X-Idempotency-Key': Date.now().toString()
+                }
+            }
+        );
 
-        const paymentId = responseCobranca.data.id;
+        const pointOfInteraction = response.data.point_of_interaction;
+        const qrCode = pointOfInteraction?.transaction_data?.qr_code;
+        const qrCodeBase64 = pointOfInteraction?.transaction_data?.qr_code_base64;
 
-        const responseQrCode = await axios.get(`${ASAAS_API_URL}/payments/${paymentId}/pixQrCode`, {
-            headers: { 'access_token': ASAAS_ACCESS_KEY }
-        });
-
-        res.status(200).json({
-            success: true,
-            paymentId: paymentId,
-            encodedImage: responseQrCode.data.encodedImage,
-            payloadPix: responseQrCode.data.payload
+        return res.status(201).json({
+            status: response.data.status,
+            id: response.data.id,
+            qr_code: qrCode,
+            qr_code_base64: qrCodeBase64,
+            ticket_url: pointOfInteraction?.transaction_data?.ticket_url
         });
 
     } catch (error) {
-        console.error('Erro ao gerar Pix real:', error.response?.data || error.message);
-        res.status(500).json({ success: false, error: 'Falha ao comunicar com o gateway de pagamento Pix.' });
+        console.error('Erro ao gerar Pix:', error.response?.data || error.message);
+        return res.status(500).json({
+            error: 'Erro ao processar pagamento Pix',
+            detalhes: error.response?.data || error.message
+        });
     }
 });
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
-    console.log(`Servidor Jobby a correr na porta ${PORT}`);
+    console.log(`Servidor a correr na porta ${PORT}`);
 });
