@@ -6,8 +6,8 @@ const app = express();
 app.use(express.json());
 app.use(cors());
 
-// Inicializa a SDK com a chave das variáveis de ambiente
-const abacatePay = AbacatePay(process.env.ABACATEPAY_API_KEY);
+// Inicializa a SDK passando a apiKey dentro do objeto de configuração
+const abacatePay = AbacatePay({ apiKey: process.env.ABACATEPAY_API_KEY });
 
 app.get('/', (req, res) => {
   res.send('Servidor Jobby Backend Online!');
