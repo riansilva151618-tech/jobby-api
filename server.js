@@ -6,6 +6,9 @@ const app = express();
 app.use(express.json());
 app.use(cors());
 
+// Chave da API do AbacatePay
+const ABACATEPAY_KEY = process.env.ABACATEPAY_API_KEY || "Key_AWkuX4ZeSJYTMzkHutAXnbsQ";
+
 app.get('/', (req, res) => {
   res.send('Servidor Jobby Backend Online!');
 });
@@ -38,7 +41,7 @@ app.post('/api/pagar-pix', async (req, res) => {
       },
       {
         headers: {
-          Authorization: `Bearer ${process.env.ABACATEPAY_API_KEY}`,
+          Authorization: `Bearer ${ABACATEPAY_KEY}`,
           'Content-Type': 'application/json'
         }
       }
