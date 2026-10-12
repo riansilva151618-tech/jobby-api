@@ -1,60 +1,51 @@
 const express = require('express');
 const cors = require('cors');
-const axios = require('axios');
 
 const app = express();
 app.use(express.json());
 app.use(cors());
 
-// Chave do AbacatePay
-const ABACATEPAY_KEY = process.env.ABACATEPAY_API_KEY || "key_AWkuX4ZeSJYTMzkHutAXnbsQ";
-
 app.get('/', (req, res) => {
   res.send('Servidor Jobby Backend Online!');
 });
 
-app.post('/api/pagar-pix', async (req, res) => {
+// Rota para calcular o pagamento (Fixo ou Por Hora + 15% de comissão)
+app.post('/api/calcular-servico', (req, res) => {
   try {
-    const { transaction_amount, description, payer } = req.body;
+    const { tipo_pagamento, valor_base, quantidade_horas } = req.body;
+    
+    let valorTrabalhador = 0;
 
-    // Endpoint oficial e único do AbacatePay
-    const response = await axios.post(
-      'https://api.abacatepay.com/v1/billing/create',
-      {
-        frequency: "ONE_TIME",
-        methods: ["PIX"],
-        products: [
-          {
-            externalId: "prod-1",
-            name: description || "Pagamento Jobby",
-            quantity: 1,
-            price: Math.round(Number(transaction_amount || 10) * 100)
-          }
-        ],
-        returnUrl: "https://jobby-api-krma.onrender.com",
-        completionUrl: "https://jobby-api-krma.onrender.com",
-        customer: {
-          name: payer?.first_name || "Cliente Jobby",
-          cellphone: "11999999999",
-          email: payer?.email || "cliente@jobby.com",
-          taxId: payer?.identification?.number || "14678875441"
-        }
-      },
-      {
-        headers: {
-          Authorization: `Bearer ${ABACATEPAY_KEY}`,
-          'Content-Type': 'application/json'
-        }
+    if (tipo_pagamento === "FIXO") {
+      valorTrabalhador = Number(valor_base);
+    } else if (tipo_pagamento === "HORA") {
+      valorTrabalhador = Number(valor_base) * Number(quantidade_horas || 1);
+    } else {
+      return res.status(400).json({ 
+        error: "Tipo de pagamento inválido. Use 'FIXO' ou 'HORA'." 
+      });
+    }
+
+    // A sua comissão de 15% cobrada da empresa
+    const comissaoPlataforma = valorTrabalhador * 0.15;
+    
+    // O valor total que a empresa vai pagar (Valor do trabalhador + 15%)
+    const valorTotalEmpresa = valorTrabalhador + comissaoPlataforma;
+
+    return res.json({
+      sucesso: true,
+      detalhes: {
+        tipo: tipo_pagamento,
+        valor_a_pagar_ao_funcionario: Number(valorTrabalhador.toFixed(2)),
+        sua_comissao_15_porcento: Number(comissaoPlataforma.toFixed(2)),
+        valor_total_cobranca_empresa: Number(valorTotalEmpresa.toFixed(2))
       }
-    );
-
-    return res.status(201).json(response.data);
+    });
 
   } catch (error) {
-    console.error('Erro no AbacatePay:', error.response?.data || error.message);
     return res.status(500).json({
-      error: 'Erro ao processar pagamento com AbacatePay',
-      detalhes: error.response?.data || error.message
+      error: "Erro ao processar o cálculo",
+      detalhes: error.message
     });
   }
 });
