@@ -30,9 +30,10 @@ app.post('/api/pagar-pix', async (req, res) => {
         returnUrl: "https://jobby-api-krma.onrender.com",
         completionUrl: "https://jobby-api-krma.onrender.com",
         customer: {
+          name: payer?.first_name || "Cliente Jobby",
+          cellphone: "11999999999",
           email: payer?.email || "cliente@jobby.com",
-          taxId: payer?.identification?.number || "14678875441",
-          name: payer?.first_name || "Cliente Jobby"
+          taxId: payer?.identification?.number || "14678875441"
         }
       },
       {
