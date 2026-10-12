@@ -6,7 +6,6 @@ const app = express();
 app.use(express.json());
 app.use(cors());
 
-// Chave idêntica ao painel do AbacatePay (com 'key_' em minúsculas)
 const ABACATEPAY_KEY = process.env.ABACATEPAY_API_KEY || "key_AWkuX4ZeSJYTMzkHutAXnbsQ";
 
 app.get('/', (req, res) => {
@@ -16,8 +15,6 @@ app.get('/', (req, res) => {
 app.post('/api/pagar-pix', async (req, res) => {
   try {
     const { transaction_amount, description, payer } = req.body;
-
-    console.log('Iniciando cobranca com a chave:', ABACATEPAY_KEY.substring(0, 8) + '...');
 
     const response = await axios.post(
       'https://api.abacatepay.com/v1/billing/create',
