@@ -6,8 +6,8 @@ const app = express();
 app.use(express.json());
 app.use(cors());
 
-// Chave da API do AbacatePay
-const ABACATEPAY_KEY = process.env.ABACATEPAY_API_KEY || "Key_AWkuX4ZeSJYTMzkHutAXnbsQ";
+// Chave idêntica ao painel do AbacatePay (com 'key_' em minúsculas)
+const ABACATEPAY_KEY = process.env.ABACATEPAY_API_KEY || "key_AWkuX4ZeSJYTMzkHutAXnbsQ";
 
 app.get('/', (req, res) => {
   res.send('Servidor Jobby Backend Online!');
@@ -16,6 +16,8 @@ app.get('/', (req, res) => {
 app.post('/api/pagar-pix', async (req, res) => {
   try {
     const { transaction_amount, description, payer } = req.body;
+
+    console.log('Iniciando cobranca com a chave:', ABACATEPAY_KEY.substring(0, 8) + '...');
 
     const response = await axios.post(
       'https://api.abacatepay.com/v1/billing/create',
@@ -27,7 +29,7 @@ app.post('/api/pagar-pix', async (req, res) => {
             externalId: "prod-1",
             name: description || "Pagamento Jobby",
             quantity: 1,
-            price: Math.round(Number(transaction_amount) * 100)
+            price: Math.round(Number(transaction_amount || 10) * 100)
           }
         ],
         returnUrl: "https://jobby-api-krma.onrender.com",
