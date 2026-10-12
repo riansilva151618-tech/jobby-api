@@ -6,7 +6,7 @@ const app = express();
 app.use(express.json());
 app.use(cors());
 
-// Chave do AbacatePay Sandbox
+// Chave do AbacatePay
 const ABACATEPAY_KEY = process.env.ABACATEPAY_API_KEY || "key_AWkuX4ZeSJYTMzkHutAXnbsQ";
 
 app.get('/', (req, res) => {
@@ -17,9 +17,9 @@ app.post('/api/pagar-pix', async (req, res) => {
   try {
     const { transaction_amount, description, payer } = req.body;
 
-    // URL direcionada para o Sandbox (Testes) do AbacatePay
+    // Endpoint oficial e único do AbacatePay
     const response = await axios.post(
-      'https://sandbox.abacatepay.com/v1/billing/create',
+      'https://api.abacatepay.com/v1/billing/create',
       {
         frequency: "ONE_TIME",
         methods: ["PIX"],
